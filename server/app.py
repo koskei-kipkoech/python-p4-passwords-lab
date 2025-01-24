@@ -25,19 +25,40 @@ class Signup(Resource):
         user.password_hash = json['password']
         db.session.add(user)
         db.session.commit()
+        session['user_id'] = user.id
         return user.to_dict(), 201
 
 class CheckSession(Resource):
-    pass
+    def get(self):
+        if session.get('user_id'):
+            user = User.query.filter(User.id == session['user_id']).first()
+            return user.to_dict(), 200
+        return {}, 204
+
+    
 
 class Login(Resource):
-    pass
+    def post(self):
+        password = request.get_json()['password']
+        username = request.get_json()['username']
+        user = User.query.filter(User.username == username).first()
+        if user.authenticate(password):
+            session['user_id'] = user.id
+            return user.to_dict(), 200
+        return {'error': '401 Unauthorized'}, 401
+
 
 class Logout(Resource):
-    pass
+    def delete(self):
+        session.clear()
+        return {}, 204
 
 api.add_resource(ClearSession, '/clear', endpoint='clear')
 api.add_resource(Signup, '/signup', endpoint='signup')
+api.add_resource(Login, '/login', endpoint='login')
+api.add_resource(Logout, '/logout', endpoint='logout')
+api.add_resource(CheckSession, '/check_session', endpoint='check_session')
+
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
